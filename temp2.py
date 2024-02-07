@@ -1,31 +1,50 @@
 import numpy as np
+import queue
 
-class StateGenerator:
-    def __init__(self, n):
-        self.n = n
-        self.current_state = None
-        self.states = {}  # Make states an instance attribute
+def is_safe(board, row, col, n):
+    for i in range(col):
+        if board[row][i] == 1:
+            return False
 
-    def generate_states(self, state):
-        # state = np.copy(state)
-        for i in range(self.n):
-            for j in range(self.n):
-                if state[i][j] == 1:
-                    state[i][j] = 0
-                    state[i][(j + 1) % self.n] = 1  # Correct modulo calculation
-                    ones_coords = [(i, j) for i, row in enumerate(state) for j, val in enumerate(row) if val == 1]
-                # Use coordinates as key
-                    key = tuple(ones_coords)
-                    if key not in self.states:
-                        self.states[key] = total_threat(state)
+    for i, j in zip(range(row, -1, -1), range(col, -1, -1)):
+        if board[i][j] == 1:
+            return False
 
-    def reconstruct_state(self, ones_coords):
-        state = np.zeros((self.n, self.n))
-        for coord in ones_coords.keys():
-            state[coord[0]][coord[1]] = 1
-        return state
-    
-def count_queens_and_positions(board):
+
+    for i, j in zip(range(row, n, 1), range(col, -1, -1)):
+        if board[i][j] == 1:
+            return False
+
+    return True
+
+# def heuristic(board):
+#     # Number of pairs of queens that are attacking each other
+#     conflicts = 0
+#     n = len(board)
+#     for i in range(n):
+#         for j in range(n):
+#             if board[i][j] == 1:
+#                 # Check rows and columns
+#                 for k in range(n):
+#                     if k != j and board[i][k] == 1:
+#                         conflicts += 1
+#                     if k != i and board[k][j] == 1:
+#                         conflicts += 1
+#                 # Check diagonals
+#                 for k in range(n):
+#                     for l in range(n):
+#                         if k != i and l != j and abs(i - k) == abs(j - l) and board[k][l] == 1:
+#                             conflicts += 1
+#     return conflicts // 2  # Each pair of queens is counted twice
+
+
+
+
+
+
+
+
+def count_and_positions(board):
     count = 0
     positions = []
     for i in range(n):
@@ -35,40 +54,39 @@ def count_queens_and_positions(board):
                 positions.append((i, j))
     return positions, count
 
+
 def threat_score(board, row, col):
     score = 0
     n = len(board)
-    # checking col above
-    for i in range(row - 1, -1, -1): #we start with row - 1 so we dont count the current queen
+ 
+    for i in range(row - 1, -1, -1): 
         if board[i][col] == 1:
             score += 1
             break
 
-    # checking col below
-    for i in range(row + 1, n): # here we're moving up so we do row + 1
+ 
+    for i in range(row + 1, n): 
         if board[i][col] == 1:
             score += 1
             break
 
-    # checking positive diagonal moving up
+    
     for i, j in zip(range(row - 1, -1, -1), range(col + 1, n, 1)):
         if board[i][j] == 1:
             score += 1
             break
 
-    # checking positive diagonal moving down
+  
     for i, j in zip(range(row + 1, n, 1), range(col - 1, -1, -1)):
         if board[i][j] == 1:
             score += 1
             break
 
-    # checking negative diagonal moving up
     for i, j in zip(range(row - 1, -1, -1), range(col - 1, -1, -1)):
         if board[i][j] == 1:
             score += 1
             break
 
-    # checking negative diagonal moving down
     for i, j in zip(range(row + 1, n, 1), range(col + 1, n, 1)):
         if board[i][j] == 1:
             score += 1
@@ -76,28 +94,47 @@ def threat_score(board, row, col):
 
     return score
 
-
-def total_threat(board):
+def heuristic(state):
     total = 0
-    positions, count = count_queens_and_positions(board)  # board argument was missing
+    positions, count = count_and_positions(state) 
     for i in range(count):
         row, col = positions[i]
-        total += threat_score(board,row, col)
+        total += threat_score(state,row, col)
     return total
 
 
+
+
+
+def astar_nqueens(n):
+    start_state = np.zeros((n, n), dtype=int)
+    open_set = queue.PriorityQueue()
+    open_set.put((heuristic(start_state), 0, tuple(map(tuple, start_state))))
+
+    while not open_set.empty():
+        _, cost, current_state = open_set.get()
+        current_state = np.array(current_state)
+
+        if np.sum(current_state) == n:
+            print("Solution Found:")
+            print(current_state)
+            return
+
+        row = np.where(current_state.sum(axis=1) == 0)[0][0]
+
+        for col in range(n):
+            if is_safe(current_state, row, col, n):
+                new_state = current_state.copy()
+                new_state[row, col] = 1
+                h = heuristic(new_state)
+                g = cost + 1
+                f = g + h
+                open_set.put((f, g, tuple(map(tuple, new_state))))
+
+        print("Step", cost)
+        print(current_state)
+
+    print("No solution found.")
+
 n = int(input("Enter number of Queens: "))
-board = np.zeros((n, n), dtype=int)
-for i in range(n):
-    board[i][0] = 1
-
-print("Initial State")
-print(board)
-print()
-
-all = StateGenerator(4)
-all.generate_states(board)
-
-for element in all.states:
-    state = all.reconstruct_state(all.states)
-    print(state)
+astar_nqueens(n)
