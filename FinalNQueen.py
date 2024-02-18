@@ -38,12 +38,6 @@ def is_safe(board, row, col, n):
 #     return conflicts // 2  # Each pair of queens is counted twice
 
 
-
-
-
-
-
-
 def count_and_positions(board):
     count = 0
     positions = []
@@ -103,21 +97,26 @@ def heuristic(state):
     return total
 
 
-
-
-
 def astar_nqueens(n):
+    total_steps = 0
     start_state = np.zeros((n, n), dtype=int)
     open_set = queue.PriorityQueue()
     open_set.put((heuristic(start_state), 0, tuple(map(tuple, start_state))))
-
+    closed_states = set()
     while not open_set.empty():
-        _, cost, current_state = open_set.get()
+        totalF, cost, current_state = open_set.get()
         current_state = np.array(current_state)
+
+        if tuple(current_state.flatten()) in closed_states:
+            continue
+
+        closed_states.add(tuple(current_state.flatten()))
 
         if np.sum(current_state) == n:
             print("Solution Found:")
             print(current_state)
+            print("Total Threat: ", heuristic(current_state))
+            print("\nTotal Steps taken: ", total_steps)
             return
 
         row = np.where(current_state.sum(axis=1) == 0)[0][0]
@@ -125,6 +124,7 @@ def astar_nqueens(n):
         for col in range(n):
             if is_safe(current_state, row, col, n):
                 new_state = current_state.copy()
+                total_steps += 1
                 new_state[row, col] = 1
                 h = heuristic(new_state)
                 g = cost + 1
@@ -133,6 +133,7 @@ def astar_nqueens(n):
 
         print("Step", cost)
         print(current_state)
+        print("Total Threat: ", heuristic(current_state))
 
     print("No solution found.")
 
